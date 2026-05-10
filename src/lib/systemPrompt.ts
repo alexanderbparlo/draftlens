@@ -108,8 +108,6 @@ The required schema is:
   "chat_response": ""
 }
 
-Echo back the thresholds_applied object exactly as it was provided in the request. The application is the source of truth for thresholds.
-
 For initial analysis, chat_response should be 4-6 sentences summarizing total flag counts by category, the highest-priority findings, and any significant limitations in the extraction (missing statements, low confidence sections).
 
 All flag objects must include a unique id field (format: "VAR-001", "LANG-001", "CLER-001" etc.) for cross-referencing in agent_notes.

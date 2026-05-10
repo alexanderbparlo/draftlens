@@ -112,7 +112,11 @@ Use this as your reference for all follow-up questions. Return the complete Anal
       throw new Error('No text content in API response')
     }
 
-    const updated = parseAnalysisResponse(textBlock.text) as Analysis
+    const parsedChat = parseAnalysisResponse(textBlock.text)
+    if (!isValidAnalysisShape(parsedChat)) {
+      throw new Error('Model returned unexpected response structure')
+    }
+    const updated = parsedChat
 
     return NextResponse.json<APIResponse<Analysis>>(
       { success: true, data: updated },
@@ -120,8 +124,11 @@ Use this as your reference for all follow-up questions. Return the complete Anal
     )
   } catch (err) {
     console.error('[/api/chat] Error:', err)
-    const m = err instanceof Error ? err.message : 'An unexpected error occurred.'
-    return badRequest(`Chat failed: ${m}`, headers, 500)
+    const m = err instanceof Error ? err.message : ''
+    if (m.includes('JSON') || m.includes('response structure')) {
+      return badRequest('The model returned an unexpected response format. Please try again.', headers, 502)
+    }
+    return badRequest('Chat failed. Please try again.', headers, 500)
   }
 }
 

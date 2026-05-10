@@ -9,6 +9,8 @@ export const LIMITS = {
   // analyze: two ~10MB documents base64-encoded ≈ 27MB. Headroom to 35MB.
   MAX_ANALYZE_BODY_BYTES: 35 * 1024 * 1024,
   MAX_USER_NOTES_CHARS: 5_000,
+  // DOCX text extraction: cap decompressed output to prevent zip-bomb expansion.
+  MAX_EXTRACTED_TEXT_CHARS: 2_000_000,
   // chat
   MAX_CHAT_MESSAGE_CHARS: 5_000,
   MAX_HISTORY_ITEMS: 100,

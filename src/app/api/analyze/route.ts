@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import mammoth from 'mammoth'
 import { DRAFTLENS_SYSTEM_PROMPT, MODEL_CONFIG } from '@/lib/systemPrompt'
 import { checkRateLimit, rateLimitHeaders, getClientIdentifier } from '@/lib/rateLimit'
-import { LIMITS, checkContentLength } from '@/lib/requestGuards'
+import { LIMITS, checkContentLength, isValidAnalysisShape } from '@/lib/requestGuards'
 import { parseAnalysisResponse, applyThresholds } from '@/lib/utils'
 import type {
   AnalyzeRequest,
@@ -70,6 +70,9 @@ async function buildDocumentBlock(label: string, doc: UploadedDocument): Promise
       if (!extractedText.trim()) {
         return { block: null, error: `No readable text found in "${doc.name}".` }
       }
+      if (extractedText.length > LIMITS.MAX_EXTRACTED_TEXT_CHARS) {
+        return { block: null, error: `Word document "${doc.name}" contains too much text. Please export as PDF instead.` }
+      }
       return {
         block: {
           type: 'document',
@@ -78,11 +81,10 @@ async function buildDocumentBlock(label: string, doc: UploadedDocument): Promise
         },
       }
     } catch (err) {
+      console.error(`[mammoth] Failed to read "${doc.name}":`, err)
       return {
         block: null,
-        error: `Failed to read Word document "${doc.name}": ${
-          err instanceof Error ? err.message : 'unknown error'
-        }`,
+        error: `Failed to read Word document "${doc.name}". Please ensure it is a valid .docx file.`,
       }
     }
   }
@@ -153,8 +155,8 @@ export async function POST(request: NextRequest) {
     return badRequest('Threshold configuration is required.', headers)
   }
   const t = thresholds as Partial<VarianceThresholds>
-  if (typeof t.percent !== 'number' || t.percent <= 0 || t.percent > 10) {
-    return badRequest('Percent threshold must be a number between 0 and 10 (decimal).', headers)
+  if (typeof t.percent !== 'number' || t.percent <= 0 || t.percent > 1) {
+    return badRequest('Percent threshold must be a number between 0 and 1 (decimal).', headers)
   }
   if (typeof t.pc_nav_percent !== 'number' || t.pc_nav_percent <= 0 || t.pc_nav_percent > 1) {
     return badRequest('PC/NAV percent threshold must be a number between 0 and 1 (decimal).', headers)
@@ -209,7 +211,7 @@ ${notes.trim() || 'No notes provided.'}
 
 Please analyze both documents and return the complete JSON analysis object.
 
-IMPORTANT: For variance_flags, return ALL numeric line items where you observe a meaningful change between the two periods, with prior_year_value, current_year_value, dollar_change, and percent_change populated. The application will apply the materiality thresholds and filter the list. Set pc_nav_percent to null — the application computes it. Echo the thresholds object back in metadata.thresholds_applied exactly as provided here.`
+IMPORTANT: For variance_flags, return ALL numeric line items where you observe a meaningful change between the two periods, with prior_year_value, current_year_value, dollar_change, and percent_change populated. The application will apply the materiality thresholds and filter the list. Set pc_nav_percent to null — the application computes it.`
 
   content.push({ type: 'text', text: instruction })
 
@@ -229,17 +231,11 @@ IMPORTANT: For variance_flags, return ALL numeric line items where you observe a
       throw new Error('No text content in API response')
     }
 
-    const rawAnalysis = parseAnalysisResponse(textBlock.text) as Analysis
-
-    // Defensive: ensure required arrays exist.
-    rawAnalysis.variance_flags  = Array.isArray(rawAnalysis.variance_flags)  ? rawAnalysis.variance_flags  : []
-    rawAnalysis.language_flags  = Array.isArray(rawAnalysis.language_flags)  ? rawAnalysis.language_flags  : []
-    rawAnalysis.clerical_flags  = Array.isArray(rawAnalysis.clerical_flags)  ? rawAnalysis.clerical_flags  : []
-    rawAnalysis.diff_sections   = Array.isArray(rawAnalysis.diff_sections)   ? rawAnalysis.diff_sections   : []
-    rawAnalysis.agent_notes     = Array.isArray(rawAnalysis.agent_notes)     ? rawAnalysis.agent_notes     : []
-    if (!rawAnalysis.metadata) {
-      throw new Error('Missing metadata in analysis response')
+    const parsed = parseAnalysisResponse(textBlock.text)
+    if (!isValidAnalysisShape(parsed)) {
+      throw new Error('Model returned unexpected response structure')
     }
+    const rawAnalysis = parsed
 
     // Apply thresholds: compute the dollar threshold from the model-extracted PC/NAV
     // (or use the user dollar override) and filter variance candidates that don't
@@ -265,15 +261,15 @@ IMPORTANT: For variance_flags, return ALL numeric line items where you observe a
     )
   } catch (err) {
     console.error('[/api/analyze] Error:', err)
-    const message = err instanceof Error ? err.message : 'An unexpected error occurred.'
-    if (message.includes('JSON')) {
+    const message = err instanceof Error ? err.message : ''
+    if (message.includes('JSON') || message.includes('response structure')) {
       return badRequest(
         'The model returned an unexpected response format. Please try again.',
         headers,
         502
       )
     }
-    return badRequest(`Analysis failed: ${message}`, headers, 500)
+    return badRequest('Analysis failed. Please try again.', headers, 500)
   }
 }
 

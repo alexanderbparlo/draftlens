@@ -14,6 +14,14 @@ type RateLimitResult = {
   reset: number
 }
 
+if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+  console.warn(
+    '[rateLimit] Upstash Redis is not configured. Rate limiting is in-memory and per-process — ' +
+    'not effective in distributed or serverless deployments. Set UPSTASH_REDIS_REST_URL and ' +
+    'UPSTASH_REDIS_REST_TOKEN for production use.'
+  )
+}
+
 const memoryStore = new Map<string, { count: number; resetAt: number }>()
 
 function checkMemoryRateLimit(
