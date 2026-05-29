@@ -124,9 +124,9 @@ Never flag items the user has identified as known or expected in their notes.
 
 If a document does not appear to be a fund financial statement, return all arrays empty, set extraction_confidence to "Low", and explain in chat_response.`
 
-// Opus 4.7 with adaptive thinking + xhigh reasoning effort for complex docs.
+// Opus 4.8 with adaptive thinking + xhigh reasoning effort for complex docs.
 export const MODEL_CONFIG = {
-  model: 'claude-opus-4-7',
+  model: 'claude-opus-4-8',
   max_tokens: 8192,
   thinking: { type: 'adaptive' as const },
   output_config: { effort: 'xhigh' as const },
