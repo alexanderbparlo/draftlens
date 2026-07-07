@@ -24,13 +24,13 @@ export function ExpansionView({ isOpen, onClose, analysis }: Props) {
   }, [analysis.diff_sections])
 
   const statements = useMemo(() => Array.from(sectionsByStatement.keys()), [sectionsByStatement])
-  const [activeStatement, setActiveStatement] = useState<StatementType | null>(null)
-
-  useEffect(() => {
-    if (statements.length > 0 && (activeStatement === null || !statements.includes(activeStatement))) {
-      setActiveStatement(statements[0])
-    }
-  }, [statements, activeStatement])
+  const [selectedStatement, setSelectedStatement] = useState<StatementType | null>(null)
+  // Derive the active tab: fall back to the first statement when nothing
+  // valid is selected, without syncing state through an effect.
+  const activeStatement =
+    selectedStatement !== null && statements.includes(selectedStatement)
+      ? selectedStatement
+      : statements[0] ?? null
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -87,7 +87,7 @@ export function ExpansionView({ isOpen, onClose, analysis }: Props) {
                   return (
                     <button
                       key={s}
-                      onClick={() => setActiveStatement(s)}
+                      onClick={() => setSelectedStatement(s)}
                       className={cn(
                         'px-3 py-2 text-xs whitespace-nowrap border-b-2 transition-colors',
                         isActive

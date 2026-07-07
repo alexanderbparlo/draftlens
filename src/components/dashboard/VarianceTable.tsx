@@ -53,7 +53,7 @@ export function VarianceTable({ flags }: Props) {
     )
   }
 
-  const SortIcon = ({ active }: { active: boolean }) =>
+  const sortIcon = (active: boolean) =>
     active ? (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />) : null
 
   return (
@@ -70,7 +70,7 @@ export function VarianceTable({ flags }: Props) {
                 onClick={() => toggleSort('dollar_change')}
                 className="inline-flex items-center gap-1 hover:text-text-primary"
               >
-                $ Change <SortIcon active={sortKey === 'dollar_change'} />
+                $ Change {sortIcon(sortKey === 'dollar_change')}
               </button>
             </th>
             <th className="text-right">
@@ -78,7 +78,7 @@ export function VarianceTable({ flags }: Props) {
                 onClick={() => toggleSort('percent_change')}
                 className="inline-flex items-center gap-1 hover:text-text-primary"
               >
-                % Change <SortIcon active={sortKey === 'percent_change'} />
+                % Change {sortIcon(sortKey === 'percent_change')}
               </button>
             </th>
             <th className="text-right">
@@ -86,7 +86,7 @@ export function VarianceTable({ flags }: Props) {
                 onClick={() => toggleSort('pc_nav_percent')}
                 className="inline-flex items-center gap-1 hover:text-text-primary"
               >
-                % of PC/NAV <SortIcon active={sortKey === 'pc_nav_percent'} />
+                % of PC/NAV {sortIcon(sortKey === 'pc_nav_percent')}
               </button>
             </th>
             <th>
@@ -94,7 +94,7 @@ export function VarianceTable({ flags }: Props) {
                 onClick={() => toggleSort('severity')}
                 className="inline-flex items-center gap-1 hover:text-text-primary"
               >
-                Severity <SortIcon active={sortKey === 'severity'} />
+                Severity {sortIcon(sortKey === 'severity')}
               </button>
             </th>
             <th>Drill-Down Guidance</th>
